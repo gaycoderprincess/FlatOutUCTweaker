@@ -58,6 +58,17 @@ void DisableMenuBorders(bool apply) {
 
 bool bAirbreak = false;
 bool bFunnyButton = false;
+int nForceCarId = 0;
+bool bForceTrack = false;
+int nForceTrackId = 1;
+
+bool GetForceCarState() {
+	return *(uint8_t*)0x46937D == 0xEB;
+}
+
+void SetForceCar(bool apply) {
+	NyaHookLib::Patch<uint8_t>(0x46937D, apply ? 0xEB : 0x74);
+}
 
 void MenuLoop() {
 	ChloeMenuLib::BeginMenu();
@@ -86,6 +97,42 @@ void MenuLoop() {
 		bFunnyButton = !bFunnyButton;
 	}
 
+	if (DrawMenuOption(std::format("Force Car - {}", GetForceCarState() ? GetCarName(nForceCarId) : "false"), "")) {
+		ChloeMenuLib::BeginMenu();
+
+		if (DrawMenuOption(std::format("Active - {}", GetForceCarState()), "")) {
+			SetForceCar(!GetForceCarState());
+		}
+
+		if (DrawMenuOption(std::format("Car < {} >", GetCarName(nForceCarId)), "", false, false, true)) {
+			auto count = GetNumCars();
+			nForceCarId += ChloeMenuLib::GetMoveLR();
+			if (nForceCarId < 0) nForceCarId = count - 1;
+			if (nForceCarId >= count) nForceCarId = 0;
+		}
+
+		ChloeMenuLib::EndMenu();
+	}
+
+	std::string trackName = "*EMPTY " + std::to_string(nForceTrackId) + "*";
+	if (auto name = GetTrackName(nForceTrackId)) trackName = name;
+	if (DrawMenuOption(std::format("Force Track - {}", bForceTrack ? trackName : "false"), "")) {
+		ChloeMenuLib::BeginMenu();
+
+		if (DrawMenuOption(std::format("Active - {}", bForceTrack), "")) {
+			bForceTrack=!bForceTrack;
+		}
+
+		if (DrawMenuOption(std::format("Track < {} >", trackName), "", false, false, true)) {
+			auto count = GetNumTracks();
+			nForceTrackId += ChloeMenuLib::GetMoveLR();
+			if (nForceTrackId < 1) nForceTrackId = count;
+			if (nForceTrackId > count) nForceTrackId = 1;
+		}
+
+		ChloeMenuLib::EndMenu();
+	}
+
 	if (pGame->nGameState == GAME_STATE_RACE) {
 		if (DrawMenuOption("Fix Car", "", false, false)) {
 			if (auto ply = GetPlayer(0)) {
@@ -110,8 +157,18 @@ void MainLoop() {
 	CNyaTimer gTimer;
 	gTimer.Process();
 
-	if (pLoadingScreen) return;
 	if (!pGame) return;
+
+	if (GetForceCarState()) {
+		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Car") = nForceCarId;
+		pGame->nInstantActionCar = nForceCarId;
+	}
+
+	if (bForceTrack) {
+		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Level") = nForceTrackId;
+	}
+
+	if (pLoadingScreen) return;
 	if (pGame->nGameState != GAME_STATE_RACE) return;
 
 	if (bAirbreak) {
@@ -174,6 +231,23 @@ void __attribute__((naked)) DrawHook() {
 	);
 }
 
+void DoForceTrack() {
+	if (!bForceTrack) return;
+	pGame->nLevelId = nForceTrackId;
+}
+
+uintptr_t ForceTrackASM_jmp = 0x46A3F0;
+void __attribute__((naked)) ForceTrackASM() {
+	__asm__ (
+		"pushad\n\t"
+		"call %1\n\t"
+		"popad\n\t"
+		"jmp %0\n\t"
+			:
+			:  "m" (ForceTrackASM_jmp), "i" (DoForceTrack)
+	);
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -189,6 +263,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			if (*(uint64_t*)0x4F49F6 == 0x006A000001B4838B) {
 				NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4F49F6, &DrawHook);
 			}
+			ForceTrackASM_jmp = NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x468234, &ForceTrackASM);
 		} break;
 		default:
 			break;

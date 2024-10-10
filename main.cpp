@@ -67,7 +67,7 @@ bool GetForceCarState() {
 }
 
 void SetForceCar(bool apply) {
-	NyaHookLib::Patch<uint8_t>(0x46937D, apply ? 0xEB : 0x74);
+	NyaHookLib::Patch<uint8_t>(0x46937D, apply ? 0xEB : 0x74); // never use career active car
 }
 
 void MenuLoop() {
@@ -120,7 +120,7 @@ void MenuLoop() {
 		ChloeMenuLib::BeginMenu();
 
 		if (DrawMenuOption(std::format("Active - {}", bForceTrack), "")) {
-			bForceTrack=!bForceTrack;
+			bForceTrack = !bForceTrack;
 		}
 
 		if (DrawMenuOption(std::format("Track < {} >", trackName), "", false, false, true)) {
@@ -186,6 +186,11 @@ void MainLoop() {
 		if (IsKeyPressed(VK_DOWN)) fwd -= 5;
 		if (IsKeyPressed('W')) uwd += 5;
 		if (IsKeyPressed('S')) uwd -= 5;
+		if (IsKeyPressed(VK_LSHIFT)) {
+			fwd *= 3;
+			swd *= 3;
+			uwd *= 3;
+		}
 
 		auto mat = car->GetMatrix();
 		mat->p += fwd * mat->z * gTimer.fDeltaTime;

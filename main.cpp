@@ -133,7 +133,7 @@ void MenuLoop() {
 		ChloeMenuLib::EndMenu();
 	}
 
-	if (pGame->nGameState == GAME_STATE_RACE) {
+	if (pGameFlow->nGameState == GAME_STATE_RACE) {
 		if (DrawMenuOption("Fix Car", "", false, false)) {
 			if (auto ply = GetPlayer(0)) {
 				ply->pCar->Fix(false);
@@ -157,11 +157,11 @@ void MainLoop() {
 	CNyaTimer gTimer;
 	gTimer.Process();
 
-	if (!pGame) return;
+	if (!pGameFlow) return;
 
 	if (GetForceCarState()) {
 		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Car") = nForceCarId;
-		pGame->nInstantActionCar = nForceCarId;
+		pGameFlow->nInstantActionCar = nForceCarId;
 	}
 
 	if (bForceTrack) {
@@ -169,7 +169,7 @@ void MainLoop() {
 	}
 
 	if (pLoadingScreen) return;
-	if (pGame->nGameState != GAME_STATE_RACE) return;
+	if (pGameFlow->nGameState != GAME_STATE_RACE) return;
 
 	if (bAirbreak) {
 		auto ply = GetPlayer(0);
@@ -238,7 +238,7 @@ void __attribute__((naked)) DrawHook() {
 
 void DoForceTrack() {
 	if (!bForceTrack) return;
-	pGame->nLevelId = nForceTrackId;
+	pGameFlow->nLevelId = nForceTrackId;
 }
 
 uintptr_t ForceTrackASM_jmp = 0x46A3F0;

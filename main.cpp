@@ -61,13 +61,38 @@ bool bFunnyButton = false;
 int nForceCarId = 0;
 bool bForceTrack = false;
 int nForceTrackId = 1;
-
-bool GetForceCarState() {
-	return *(uint8_t*)0x46937D == 0xEB;
-}
+bool bUnlockAllCareer = false;
+bool bForceCar = false;
 
 void SetForceCar(bool apply) {
+	bForceCar = apply;
 	NyaHookLib::Patch<uint8_t>(0x46937D, apply ? 0xEB : 0x74); // never use career active car
+}
+
+int lua_pushfalse(void* a1, bool a2) {
+	return lua_pushboolean(a1, false);
+}
+
+void SetUnlockAllCareer(bool apply) {
+	bUnlockAllCareer = apply;
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x483CEA, apply ? (uintptr_t)&lua_pushfalse : 0x633870); // cup
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x483FE8, apply ? (uintptr_t)&lua_pushfalse : 0x633870); // event
+}
+
+void PaletteEditorMenu(uint8_t& value) {
+	ChloeMenuLib::BeginMenu();
+
+	static char inputString[1024] = {};
+	ChloeMenuLib::AddTextInputToString(inputString, 1024, true);
+	ChloeMenuLib::SetEnterHint("Apply");
+
+	if (DrawMenuOption(inputString + (std::string)"...", "", false, false) && inputString[0]) {
+		value = std::stoi(inputString);
+		memset(inputString,0,sizeof(inputString));
+		ChloeMenuLib::BackOut();
+	}
+
+	ChloeMenuLib::EndMenu();
 }
 
 void MenuLoop() {
@@ -97,11 +122,11 @@ void MenuLoop() {
 		bFunnyButton = !bFunnyButton;
 	}
 
-	if (DrawMenuOption(std::format("Force Car - {}", GetForceCarState() ? GetCarName(nForceCarId) : "false"), "")) {
+	if (DrawMenuOption(std::format("Force Car - {}", bForceCar ? GetCarName(nForceCarId) : "false"), "")) {
 		ChloeMenuLib::BeginMenu();
 
-		if (DrawMenuOption(std::format("Active - {}", GetForceCarState()), "")) {
-			SetForceCar(!GetForceCarState());
+		if (DrawMenuOption(std::format("Active - {}", bForceCar), "")) {
+			SetForceCar(!bForceCar);
 		}
 
 		if (DrawMenuOption(std::format("Car < {} >", GetCarName(nForceCarId)), "", false, false, true)) {
@@ -112,6 +137,10 @@ void MenuLoop() {
 		}
 
 		ChloeMenuLib::EndMenu();
+	}
+
+	if (DrawMenuOption(std::format("Unlock All Career Events - {}", bUnlockAllCareer), "", false, false)) {
+		SetUnlockAllCareer(!bUnlockAllCareer);
 	}
 
 	std::string trackName = "*EMPTY " + std::to_string(nForceTrackId) + "*";
@@ -130,6 +159,27 @@ void MenuLoop() {
 			if (nForceTrackId > count) nForceTrackId = 1;
 		}
 
+		ChloeMenuLib::EndMenu();
+	}
+
+	if (DrawMenuOption("Palette Editor")) {
+		ChloeMenuLib::BeginMenu();
+		for (int i = 0; i < 256; i++) {
+			auto& col = *(NyaDrawing::CNyaRGBA32*)&gPalette[i];
+			if (DrawMenuOption(std::format("Color {} - {} {} {}", i, col.b, col.g, col.r))) {
+				ChloeMenuLib::BeginMenu();
+				if (DrawMenuOption(std::format("Red - {}", col.b))) {
+					PaletteEditorMenu(col.b);
+				}
+				if (DrawMenuOption(std::format("Green - {}", col.g))) {
+					PaletteEditorMenu(col.g);
+				}
+				if (DrawMenuOption(std::format("Blue - {}", col.r))) {
+					PaletteEditorMenu(col.r);
+				}
+				ChloeMenuLib::EndMenu();
+			}
+		}
 		ChloeMenuLib::EndMenu();
 	}
 
@@ -159,9 +209,10 @@ void MainLoop() {
 
 	if (!pGameFlow) return;
 
-	if (GetForceCarState()) {
+	if (bForceCar) {
 		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Car") = nForceCarId;
 		pGameFlow->nInstantActionCar = nForceCarId;
+		NyaHookLib::Patch<uint8_t>(0x46937D, 0xEB); // never use career active car
 	}
 
 	if (bForceTrack) {

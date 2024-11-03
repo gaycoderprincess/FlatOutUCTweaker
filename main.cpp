@@ -79,22 +79,6 @@ void SetUnlockAllCareer(bool apply) {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x483FE8, apply ? (uintptr_t)&lua_pushfalse : 0x633870); // event
 }
 
-void PaletteEditorMenu(uint8_t& value) {
-	ChloeMenuLib::BeginMenu();
-
-	static char inputString[1024] = {};
-	ChloeMenuLib::AddTextInputToString(inputString, 1024, true);
-	ChloeMenuLib::SetEnterHint("Apply");
-
-	if (DrawMenuOption(inputString + (std::string)"...", "", false, false) && inputString[0]) {
-		value = std::stoi(inputString);
-		memset(inputString,0,sizeof(inputString));
-		ChloeMenuLib::BackOut();
-	}
-
-	ChloeMenuLib::EndMenu();
-}
-
 void MenuLoop() {
 	ChloeMenuLib::BeginMenu();
 
@@ -159,27 +143,6 @@ void MenuLoop() {
 			if (nForceTrackId > count) nForceTrackId = 1;
 		}
 
-		ChloeMenuLib::EndMenu();
-	}
-
-	if (DrawMenuOption("Palette Editor")) {
-		ChloeMenuLib::BeginMenu();
-		for (int i = 0; i < 256; i++) {
-			auto& col = *(NyaDrawing::CNyaRGBA32*)&gPalette[i];
-			if (DrawMenuOption(std::format("Color {} - {} {} {}", i, col.b, col.g, col.r))) {
-				ChloeMenuLib::BeginMenu();
-				if (DrawMenuOption(std::format("Red - {}", col.b))) {
-					PaletteEditorMenu(col.b);
-				}
-				if (DrawMenuOption(std::format("Green - {}", col.g))) {
-					PaletteEditorMenu(col.g);
-				}
-				if (DrawMenuOption(std::format("Blue - {}", col.r))) {
-					PaletteEditorMenu(col.r);
-				}
-				ChloeMenuLib::EndMenu();
-			}
-		}
 		ChloeMenuLib::EndMenu();
 	}
 

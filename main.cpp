@@ -10,6 +10,8 @@
 #include "fouc.h"
 #include "chloemenulib.h"
 
+#include "freecam.h"
+
 void HookLoop() {}
 
 bool GetResetMapState() {
@@ -79,6 +81,22 @@ void SetUnlockAllCareer(bool apply) {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x483FE8, apply ? (uintptr_t)&lua_pushfalse : 0x633870); // event
 }
 
+void ValueEditorMenu(float& value) {
+	ChloeMenuLib::BeginMenu();
+
+	static char inputString[1024] = {};
+	ChloeMenuLib::AddTextInputToString(inputString, 1024, true);
+	ChloeMenuLib::SetEnterHint("Apply");
+
+	if (DrawMenuOption(inputString + (std::string)"...", "", false, false) && inputString[0]) {
+		value = std::stof(inputString);
+		memset(inputString,0,sizeof(inputString));
+		ChloeMenuLib::BackOut();
+	}
+
+	ChloeMenuLib::EndMenu();
+}
+
 void MenuLoop() {
 	ChloeMenuLib::BeginMenu();
 
@@ -127,6 +145,121 @@ void MenuLoop() {
 		SetUnlockAllCareer(!bUnlockAllCareer);
 	}
 
+	if (DrawMenuOption(std::format("Free Camera - {}", bFreeCam), "")) {
+		ChloeMenuLib::BeginMenu();
+
+		if (DrawMenuOption(std::format("Active - {}", bFreeCam), "")) {
+			bFreeCam = !bFreeCam;
+			nFreeCamCopy = -1;
+		}
+
+		if (DrawMenuOption(std::format("Move Speed - {}", fFreeCamSpeed), "")) {
+			ValueEditorMenu(fFreeCamSpeed);
+		}
+
+		if (DrawMenuOption(std::format("Pan Speed - {}", fFreeCamPanSpeed), "")) {
+			ValueEditorMenu(fFreeCamPanSpeed);
+		}
+
+		if (DrawMenuOption(std::format("Scroll Speed - {}", fFreeCamMouseScrollSpeed), "")) {
+			ValueEditorMenu(fFreeCamMouseScrollSpeed);
+		}
+
+		if (DrawMenuOption(std::format("Rotation Speed - {}", fFreeCamMouseSpeed), "")) {
+			ValueEditorMenu(fFreeCamMouseSpeed);
+		}
+
+		if (DrawMenuOption(std::format("Point & Follow"))) {
+			ChloeMenuLib::BeginMenu();
+
+			if (DrawMenuOption(std::format("Point at Player < {} >", nFreeCamLookAtPlayer >= 0 ? std::format("Player {}", nFreeCamLookAtPlayer+1) : "false"), "", false, false, true)) {
+				auto count = 0;
+				if (pGameFlow->nGameState == GAME_STATE_RACE && pGameFlow->pHost) count = pGameFlow->pHost->GetNumPlayers();
+
+				nFreeCamLookAtPlayer += ChloeMenuLib::GetMoveLR();
+				if (nFreeCamLookAtPlayer < -1) nFreeCamLookAtPlayer = count-1;
+				if (nFreeCamLookAtPlayer >= count) nFreeCamLookAtPlayer = -1;
+			}
+
+			if (DrawMenuOption(std::format("Point Relative Offset X - {}", vFreeCamLookatOffset.x), "")) {
+				ValueEditorMenu(vFreeCamLookatOffset.x);
+			}
+
+			if (DrawMenuOption(std::format("Point Relative Offset Y - {}", vFreeCamLookatOffset.y), "")) {
+				ValueEditorMenu(vFreeCamLookatOffset.y);
+			}
+
+			if (DrawMenuOption(std::format("Point Relative Offset Z - {}", vFreeCamLookatOffset.z), "")) {
+				ValueEditorMenu(vFreeCamLookatOffset.z);
+			}
+
+			if (DrawMenuOption(std::format("Point Absolute Offset X - {}", vFreeCamLookatOffsetAbs.x), "")) {
+				ValueEditorMenu(vFreeCamLookatOffsetAbs.x);
+			}
+
+			if (DrawMenuOption(std::format("Point Absolute Offset Y - {}", vFreeCamLookatOffsetAbs.y), "")) {
+				ValueEditorMenu(vFreeCamLookatOffsetAbs.y);
+			}
+
+			if (DrawMenuOption(std::format("Point Absolute Offset Z - {}", vFreeCamLookatOffsetAbs.z), "")) {
+				ValueEditorMenu(vFreeCamLookatOffsetAbs.z);
+			}
+
+			if (DrawMenuOption(std::format("Follow Player < {} >", nFreeCamFollowPlayer >= 0 ? std::format("Player {}", nFreeCamFollowPlayer+1) : "false"), "", false, false, true)) {
+				auto count = 0;
+				if (pGameFlow->nGameState == GAME_STATE_RACE && pGameFlow->pHost) count = pGameFlow->pHost->GetNumPlayers();
+
+				nFreeCamFollowPlayer += ChloeMenuLib::GetMoveLR();
+				if (nFreeCamFollowPlayer < -1) nFreeCamFollowPlayer = count-1;
+				if (nFreeCamFollowPlayer >= count) nFreeCamFollowPlayer = -1;
+
+				if (auto follow = GetFreecamFollowPlayer()) {
+					vFreeCamLastPlayerPosition = follow->pCar->GetMatrix()->p;
+				}
+			}
+
+			if (DrawMenuOption(std::format("Follow Relative Offset X - {}", vFreeCamFollowOffset.x), "")) {
+				ValueEditorMenu(vFreeCamFollowOffset.x);
+			}
+
+			if (DrawMenuOption(std::format("Follow Relative Offset Y - {}", vFreeCamFollowOffset.y), "")) {
+				ValueEditorMenu(vFreeCamFollowOffset.y);
+			}
+
+			if (DrawMenuOption(std::format("Follow Relative Offset Z - {}", vFreeCamFollowOffset.z), "")) {
+				ValueEditorMenu(vFreeCamFollowOffset.z);
+			}
+
+			if (DrawMenuOption(std::format("Follow Absolute Offset X - {}", vFreeCamFollowOffsetAbs.x), "")) {
+				ValueEditorMenu(vFreeCamFollowOffsetAbs.x);
+			}
+
+			if (DrawMenuOption(std::format("Follow Absolute Offset Y - {}", vFreeCamFollowOffsetAbs.y), "")) {
+				ValueEditorMenu(vFreeCamFollowOffsetAbs.y);
+			}
+
+			if (DrawMenuOption(std::format("Follow Absolute Offset Z - {}", vFreeCamFollowOffsetAbs.z), "")) {
+				ValueEditorMenu(vFreeCamFollowOffsetAbs.z);
+			}
+
+			if (DrawMenuOption(std::format("Follow on String - {}", bFreeCamFollowString), "")) {
+				bFreeCamFollowString = !bFreeCamFollowString;
+			}
+
+			if (DrawMenuOption(std::format("String Min Distance - {}", fFreeCamStringMinDistance), "")) {
+				ValueEditorMenu(fFreeCamStringMinDistance);
+			}
+
+			if (DrawMenuOption(std::format("String Max Distance - {}", fFreeCamStringMaxDistance), "")) {
+				ValueEditorMenu(fFreeCamStringMaxDistance);
+			}
+
+			ChloeMenuLib::EndMenu();
+		}
+
+		ChloeMenuLib::EndMenu();
+	}
+
 	std::string trackName = "*EMPTY " + std::to_string(nForceTrackId) + "*";
 	if (auto name = GetTrackName(nForceTrackId)) trackName = name;
 	if (DrawMenuOption(std::format("Force Track - {}", bForceTrack ? trackName : "false"), "")) {
@@ -172,6 +305,8 @@ void MainLoop() {
 
 	if (!pGameFlow) return;
 
+	bFreeCamFirstMove = true;
+
 	if (bForceCar) {
 		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Car") = nForceCarId;
 		pGameFlow->nInstantActionCar = nForceCarId;
@@ -182,57 +317,60 @@ void MainLoop() {
 		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Level") = nForceTrackId;
 	}
 
-	if (pLoadingScreen) return;
-	if (pGameFlow->nGameState != GAME_STATE_RACE) return;
-
-	if (bAirbreak) {
-		auto ply = GetPlayer(0);
-		auto car = ply->pCar;
-		*car->GetVelocity() = {0,0,0};
-		*car->GetAngVelocity() = {0,0,0};
-
-		float fwd = 0;
-		float uwd = 0;
-		float swd = 0;
-		if (IsKeyPressed(VK_LEFT)) swd -= 5;
-		if (IsKeyPressed(VK_RIGHT)) swd += 5;
-		if (IsKeyPressed(VK_UP)) fwd += 5;
-		if (IsKeyPressed(VK_DOWN)) fwd -= 5;
-		if (IsKeyPressed('W')) uwd += 5;
-		if (IsKeyPressed('S')) uwd -= 5;
-		if (IsKeyPressed(VK_LSHIFT)) {
-			fwd *= 3;
-			swd *= 3;
-			uwd *= 3;
-		}
-
-		auto mat = car->GetMatrix();
-		mat->p += fwd * mat->z * gTimer.fDeltaTime;
-		mat->p += uwd * mat->y * gTimer.fDeltaTime;
-		mat->p += swd * mat->x * gTimer.fDeltaTime;
-
-		FO2MatrixToQuat(car->mMatrix, car->qQuaternion);
+	if (bFreeCam && pGameFlow->nGameState == GAME_STATE_MENU) {
+		DoFreeCamera(pGameFlow->pMenuInterface->Scene.pCamera);
 	}
 
-	if (bFunnyButton && IsKeyPressed(VK_MBUTTON)) {
-		auto ply = GetPlayer(0);
-		auto car = ply->pCar;
+	if (!pLoadingScreen && pGameFlow->nGameState == GAME_STATE_RACE) {
+		if (bAirbreak) {
+			auto ply = GetPlayer(0);
+			auto car = ply->pCar;
+			*car->GetVelocity() = {0, 0, 0};
+			*car->GetAngVelocity() = {0, 0, 0};
 
-		float fwd = (ply->fGasPedal - ply->fBrakePedal) * 5;
-		float uwd = 0;
-		float swd = ply->fSteeringController * 5;
-		if (ply->nIsUsingKeyboard) {
-			swd = 0;
-			if (ply->nSteeringKeyboardLeft) swd -= 5;
-			if (ply->nSteeringKeyboardRight) swd += 5;
+			float fwd = 0;
+			float uwd = 0;
+			float swd = 0;
+			if (IsKeyPressed(VK_LEFT)) swd -= 5;
+			if (IsKeyPressed(VK_RIGHT)) swd += 5;
+			if (IsKeyPressed(VK_UP)) fwd += 5;
+			if (IsKeyPressed(VK_DOWN)) fwd -= 5;
+			if (IsKeyPressed('W')) uwd += 5;
+			if (IsKeyPressed('S')) uwd -= 5;
+			if (IsKeyPressed(VK_LSHIFT)) {
+				fwd *= 3;
+				swd *= 3;
+				uwd *= 3;
+			}
+
+			auto mat = car->GetMatrix();
+			mat->p += fwd * mat->z * gTimer.fDeltaTime;
+			mat->p += uwd * mat->y * gTimer.fDeltaTime;
+			mat->p += swd * mat->x * gTimer.fDeltaTime;
+
+			FO2MatrixToQuat(car->mMatrix, car->qQuaternion);
 		}
-		if (IsKeyPressed('Q')) uwd += 5;
-		if (IsKeyPressed('E')) uwd -= 5;
 
-		auto mat = car->GetMatrix();
-		*car->GetVelocity() += fwd * mat->z * gTimer.fDeltaTime;
-		*car->GetVelocity() += uwd * mat->y * gTimer.fDeltaTime;
-		*car->GetVelocity() += swd * mat->x * gTimer.fDeltaTime;
+		if (bFunnyButton && IsKeyPressed(VK_MBUTTON)) {
+			auto ply = GetPlayer(0);
+			auto car = ply->pCar;
+
+			float fwd = (ply->fGasPedal - ply->fBrakePedal) * 5;
+			float uwd = 0;
+			float swd = ply->fSteeringController * 5;
+			if (ply->nIsUsingKeyboard) {
+				swd = 0;
+				if (ply->nSteeringKeyboardLeft) swd -= 5;
+				if (ply->nSteeringKeyboardRight) swd += 5;
+			}
+			if (IsKeyPressed('Q')) uwd += 5;
+			if (IsKeyPressed('E')) uwd -= 5;
+
+			auto mat = car->GetMatrix();
+			*car->GetVelocity() += fwd * mat->z * gTimer.fDeltaTime;
+			*car->GetVelocity() += uwd * mat->y * gTimer.fDeltaTime;
+			*car->GetVelocity() += swd * mat->x * gTimer.fDeltaTime;
+		}
 	}
 
 	CommonMain(false);
@@ -267,6 +405,46 @@ void __attribute__((naked)) ForceTrackASM() {
 	);
 }
 
+auto UpdateCameraHooked_call = (void(__thiscall*)(void*, float))0x4FAEA0;
+void __fastcall UpdateCameraHooked(void* a1, void*, float a2) {
+	if (bFreeCam) {
+		UpdateCameraHooked_call(a1, a2);
+		DoFreeCamera(pCameraManager->pCamera);
+	}
+	else {
+		UpdateCameraHooked_call(a1, a2);
+	}
+}
+
+void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	static bool bOnce = true;
+	if (bOnce) {
+		RAWINPUTDEVICE device;
+		device.usUsagePage = 1;
+		device.usUsage = 2;
+		device.dwFlags = 256;
+		device.hwndTarget = hWnd;
+		RegisterRawInputDevices(&device, 1, sizeof(RAWINPUTDEVICE));
+		bOnce = false;
+	}
+
+	switch (msg) {
+		case WM_MOUSEWHEEL:
+			nMouseWheelState += GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+			break;
+		case WM_INPUT: {
+			RAWINPUT raw;
+			UINT size = sizeof(raw);
+			GetRawInputData((HRAWINPUT) lParam, RID_INPUT, &raw, &size, sizeof(RAWINPUTHEADER));
+			if (raw.header.dwType != RIM_TYPEMOUSE) return;
+			fMouse[0] += raw.data.mouse.lLastX;
+			fMouse[1] += raw.data.mouse.lLastY;
+		} break;
+		default:
+			break;
+	}
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -282,7 +460,12 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			if (*(uint64_t*)0x4F49F6 == 0x006A000001B4838B) {
 				NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4F49F6, &DrawHook);
 			}
+			NyaFO2Hooks::PlaceWndProcHook();
+			NyaFO2Hooks::aWndProcFuncs.push_back(MouseWndProc);
 			ForceTrackASM_jmp = NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x468234, &ForceTrackASM);
+
+			UpdateCameraHooked_call = (void(__thiscall*)(void*, float))(*(uintptr_t*)0x6EB7DC);
+			NyaHookLib::Patch(0x6EB7DC, &UpdateCameraHooked);
 		} break;
 		default:
 			break;

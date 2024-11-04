@@ -69,15 +69,10 @@ namespace FreeCam {
 			lookat.Normalize();
 			*mat = NyaMat4x4::LookAt(lookat);
 		} else {
-			*mat = NyaMat4x4::LookAt(
-					{std::sin(vAngle[0]) * std::cos(vAngle[1]), std::sin(vAngle[1]),
-					 std::cos(vAngle[0]) * std::cos(vAngle[1])});
+			mat->SetIdentity();
+			mat->Rotate({vAngle[1], vAngle[2], vAngle[0]});
 			//vLookatOffset = {0,0,0};
 		}
-
-		NyaMat4x4 tilt;
-		tilt.Rotate({0, 0, vAngle[2]});
-		*mat *= tilt;
 		mat->p = vPos;
 	}
 
@@ -112,7 +107,7 @@ namespace FreeCam {
 			RestoreDistance(cam);
 		}
 		if (IsKeyPressed(VK_RBUTTON)) {
-			vAngle[2] += fMouse[0] * -fMouseRotateSpeed * (std::numbers::pi / 180.0);
+			vAngle[2] += fMouse[0] * fMouseRotateSpeed * (std::numbers::pi / 180.0);
 			fFOV += fMouse[1] * fMouseRotateSpeed * (std::numbers::pi / 180.0);
 		}
 		if (IsKeyPressed(rotateKey)) {
@@ -125,7 +120,7 @@ namespace FreeCam {
 				//carMat.Invert();
 				//vLookatOffset += carMat * moveAmount;
 			} else {
-				vAngle[0] += fMouse[0] * fMouseRotateSpeed * (std::numbers::pi / 180.0);
+				vAngle[0] += fMouse[0] * -fMouseRotateSpeed * (std::numbers::pi / 180.0);
 				vAngle[1] += fMouse[1] * -fMouseRotateSpeed * (std::numbers::pi / 180.0);
 			}
 		}

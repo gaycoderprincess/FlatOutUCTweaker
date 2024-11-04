@@ -321,7 +321,7 @@ void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		case WM_INPUT: {
 			RAWINPUT raw;
 			UINT size = sizeof(raw);
-			GetRawInputData((HRAWINPUT) lParam, RID_INPUT, &raw, &size, sizeof(RAWINPUTHEADER));
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &raw, &size, sizeof(RAWINPUTHEADER));
 			if (raw.header.dwType != RIM_TYPEMOUSE) return;
 			FreeCam::fMouse[0] += raw.data.mouse.lLastX;
 			FreeCam::fMouse[1] += raw.data.mouse.lLastY;

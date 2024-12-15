@@ -8,6 +8,7 @@
 #include "nya_commonhooklib.h"
 
 #include "fouc.h"
+#include "fo2versioncheck.h"
 #include "chloemenulib.h"
 
 void ValueEditorMenu(float& value) {
@@ -304,7 +305,7 @@ void __fastcall UpdateCameraHooked(void* a1, void*, float a2) {
 
 void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	static bool bOnce = true;
-	if (bOnce) {
+	if (bOnce && FreeCam::bEnabled) {
 		RAWINPUTDEVICE device;
 		device.usUsagePage = 1;
 		device.usUsage = 2;
@@ -319,12 +320,14 @@ void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			nMouseWheelState += GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
 			break;
 		case WM_INPUT: {
-			RAWINPUT raw;
-			UINT size = sizeof(raw);
-			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &raw, &size, sizeof(RAWINPUTHEADER));
-			if (raw.header.dwType != RIM_TYPEMOUSE) return;
-			FreeCam::fMouse[0] += raw.data.mouse.lLastX;
-			FreeCam::fMouse[1] += raw.data.mouse.lLastY;
+			if (FreeCam::bEnabled) {
+				RAWINPUT raw;
+				UINT size = sizeof(raw);
+				GetRawInputData((HRAWINPUT) lParam, RID_INPUT, &raw, &size, sizeof(RAWINPUTHEADER));
+				if (raw.header.dwType != RIM_TYPEMOUSE) return;
+				FreeCam::fMouse[0] += raw.data.mouse.lLastX;
+				FreeCam::fMouse[1] += raw.data.mouse.lLastY;
+			}
 		} break;
 		default:
 			break;
@@ -334,11 +337,7 @@ void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
-			if (NyaHookLib::GetEntryPoint() != 0x24CEF7) {
-				MessageBoxA(nullptr, aFOUCVersionFail, "nya?!~", MB_ICONERROR);
-				exit(0);
-				return TRUE;
-			}
+			DoFlatOutVersionCheck(FO2Version::FOUC_GFWL);
 
 			ChloeMenuLib::RegisterMenu("UC Tweaker - gaycoderprincess", MenuLoop);
 			NyaFO2Hooks::PlaceD3DHooks();

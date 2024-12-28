@@ -199,7 +199,7 @@ void MainLoop() {
 
 	if (bForceCar) {
 		*(int*)GetLiteDB()->GetTable("GameFlow.PreRace")->GetPropertyPointer("Car") = nForceCarId;
-		pGameFlow->nInstantActionCar = nForceCarId;
+		pGameFlow->PreRace.nCar = nForceCarId;
 		NyaHookLib::Patch<uint8_t>(0x46937D, 0xEB); // never use career active car
 	}
 
@@ -280,7 +280,7 @@ void __attribute__((naked)) DrawHook() {
 
 void DoForceTrack() {
 	if (!bForceTrack) return;
-	pGameFlow->nLevelId = nForceTrackId;
+	pGameFlow->PreRace.nLevel = nForceTrackId;
 }
 
 uintptr_t ForceTrackASM_jmp = 0x46A3F0;
